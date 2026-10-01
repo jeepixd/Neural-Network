@@ -73,10 +73,20 @@ loss.backward()
 print(f"conv1 bias.grad:{net.conv1.bias.grad}")
 
 #updating weights manually
-learning_rate =0.01
-for f in  net.parameters():
-    with torch.no_grad():
-        f -= f.grad * learning_rate
+#learning_rate =0.01
+#for f in  net.parameters():
+ #   with torch.no_grad():
+ #       f -= f.grad * learning_rate
 
+#to use various different update rules call torch.optim
+#create optimizer
+import torch.optim as optim
+optimizer = optim.SGD(net.parameters(), lr=0.01)
+#in your trainning loop
+optimizer.zero_grad()# zero the gradient buffers
+output = net(input)
+loss = criterion(output, target)
+loss.backward()
+optimizer.step()# does the update 
 
 
