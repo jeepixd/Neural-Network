@@ -46,16 +46,16 @@ class Net(nn.Module):
         return output
 
 net = Net()
-print(net)
+#print(net)
 
 params = list(net.parameters())
-print(len(params))
-print(params[0].size()) # conv1's weight
+#print(len(params))
+#print(params[0].size()) # conv1's weight
 
 
 input = torch.randn(1, 1, 32, 32)
 out = net(input)
-print(out)
+print(f"output:{out}")
 
 net.zero_grad()
 out.backward(torch.randn(1, 10))
@@ -66,10 +66,17 @@ target= torch.randn(10)
 target = target.view(1, -1)
 criterion = nn.MSELoss()
 loss = criterion(output, target)
-print(loss)
+print(f"loss:{loss}")
 
 net.zero_grad()
 loss.backward()
-print(net.conv1.bias.grad)
+print(f"conv1 bias.grad:{net.conv1.bias.grad}")
+
+#updating weights manually
+learning_rate =0.01
+for f in  net.parameters():
+    with torch.no_grad():
+        f -= f.grad * learning_rate
+
 
 
