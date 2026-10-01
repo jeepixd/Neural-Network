@@ -1,4 +1,4 @@
-from sympy.codegen.ast import Print
+
 from PIL import GimpGradientFile
 import torch
 import torch.nn as nn
@@ -83,10 +83,10 @@ print(f"conv1 bias.grad:{net.conv1.bias.grad}")
 import torch.optim as optim
 optimizer = optim.SGD(net.parameters(), lr=0.01)
 #in your trainning loop
-optimizer.zero_grad()# zero the gradient buffers
-output = net(input)
+optimizer.zero_grad()# zero the gradient buffers/clears the old gradient
+output = net(input)#forward pass
 loss = criterion(output, target)
-loss.backward()
+loss.backward()#backward pass
 optimizer.step()# does the update 
 
 
