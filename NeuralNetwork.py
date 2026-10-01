@@ -1,3 +1,4 @@
+from sympy.codegen.ast import Print
 from PIL import GimpGradientFile
 import torch
 import torch.nn as nn
@@ -66,4 +67,9 @@ target = target.view(1, -1)
 criterion = nn.MSELoss()
 loss = criterion(output, target)
 print(loss)
+
+net.zero_grad()
+loss.backward()
+print(net.conv1.bias.grad)
+
 
