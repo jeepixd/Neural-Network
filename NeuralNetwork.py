@@ -52,3 +52,18 @@ print(len(params))
 print(params[0].size()) # conv1's weight
 
 
+input = torch.randn(1, 1, 32, 32)
+out = net(input)
+print(out)
+
+net.zero_grad()
+out.backward(torch.randn(1, 10))
+
+#eg of loss functions
+output= net(input)
+target= torch.randn(10)
+target = target.view(1, -1)
+criterion = nn.MSELoss()
+loss = criterion(output, target)
+print(loss)
+
