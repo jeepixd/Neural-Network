@@ -4,6 +4,20 @@ from torchvision.transforms import v2
 import torch.nn as nn 
 import torch.nn.functional as F
 import torch.optim as optim
+import matplotlib.pyplot as plt
+import numpy as np
+import os
+device = torch.device(torch.accelerator.current_accelerator().type if torch.accelerator.is_available() else 'cpu')
+
+# Assuming that we are on a CUDA machine, this should print a CUDA device:
+
+print(device)
+
+def imshow(img):
+    img = img / 2 + 0.5     # unnormalize
+    npimg = img.numpy()
+    plt.imshow(np.transpose(npimg, (1, 2, 0)))
+    plt.show()
 
 transform = v2.Compose([
     v2.ToImage(),
@@ -51,7 +65,7 @@ if __name__ == '__main__':
     print("Dataset ready. Classes:", classes)
 
     net = Net()
-
+    #"""
     # Define loss function and optimizer
     criterion = nn.CrossEntropyLoss()
     optimizer = optim.SGD(net.parameters(), lr=0.001, momentum=0.9)
@@ -79,10 +93,29 @@ if __name__ == '__main__':
                 running_loss = 0.0
 
     print('Finished Training')
+    #"""
 
     PATH = './cifar_net.pt'
-    torch.save(net.state_dict(), PATH)
-    print(f'Model saved to {PATH}')
+    if not os.path.exists(PATH):
+        alt_path = os.path.join(os.path.dirname(__file__), '..', '..', 'cifar_net.pt')
+        if os.path.exists(alt_path):
+            PATH = alt_path
+
+    #torch.save(net.state_dict(), PATH)
+    #print(f'Model saved to {PATH}')
+    
+
+    dataiter = iter(testloader)
+    images, labels = next(dataiter)
+    #print images 
+    imshow(torchvision.utils.make_grid(images))
+    print('GroundTruth: ', ' '.join(f'{classes[labels[j]]:5s}' for j in range(batch_size)))
+    
+    net.load_state_dict(torch.load(PATH, weights_only=True))
+    
+    outputs = net(images)
+    _, predicted = torch.max(outputs, 1)
+    print('Predicted:   ', ' '.join(f'{classes[predicted[j]]:5s}' for j in range(batch_size)))
 
 
 
