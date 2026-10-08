@@ -236,3 +236,23 @@ print('Complete')
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
+
+# --- Play an episode with rendering to show gameplay ---
+print('Showing actual gameplay...')
+test_env = gym.make("CartPole-v1", render_mode="human")
+state, info = test_env.reset()
+state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
+done = False
+
+while not done:
+    # Use the trained policy network to pick the best action (exploitation only)
+    with torch.no_grad():
+        action = policy_net(state).max(1).indices.view(1, 1)
+    
+    observation, reward, terminated, truncated, _ = test_env.step(action.item())
+    done = terminated or truncated
+    
+    if not done:
+        state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
+
+test_env.close()
