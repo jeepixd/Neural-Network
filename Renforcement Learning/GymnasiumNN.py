@@ -148,3 +148,6 @@ def plot_durations(show_result=False):
         else:
             display.display(plt.gcf())
 
+
+#training loop
+
