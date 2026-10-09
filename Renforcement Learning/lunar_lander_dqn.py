@@ -1,19 +1,20 @@
-from os import truncate
-from pickle import TRUE
+from GymnasiumNN import truncated
+from GymnasiumNN import terminated
+from GymnasiumNN import num_episodes
 import gymnasium as gym
 import math
 import random
 import matplotlib
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt 
 from collections import namedtuple, deque
 from itertools import count
 
-import torch 
+import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F 
 
-env = gym.make("CartPole-v1")
+env = gym.make("LunarLander-v3")
 
 #setting up matlab
 is_ipython = 'inline' in matplotlib.get_backend()
@@ -27,48 +28,29 @@ device = torch.device(
     "cpu"
 )
 
-# To ensure reproducibility during training, you can fix the random seeds
-# by uncommenting the lines below. This makes the results consistent across
-# runs, which is helpful for debugging or comparing different approaches.
-#
-# That said, allowing randomness can be beneficial in practice, as it lets
-# the model explore different training trajectories.
-
-
-# seed = 42
-# random.seed(seed)
-# torch.manual_seed(seed)
-# env.reset(seed=seed)
-# env.action_space.seed(seed)
-# env.observation_space.seed(seed)
-# if torch.cuda.is_available():
-#     torch.cuda.manual_seed(seed)
 Transition = namedtuple("Transition",
                         ("state", "action", "next_state", "reward"))
-class ReplayMemory(object):
 
+class ReplayMemory(object):
     def __init__(self, capacity):
         self.memory = deque([], maxlen=capacity)
     
     def push(self, *args):
-        """Save a transition"""
         self.memory.append(Transition(*args))
 
     def sample(self, batch_size):
         return random.sample(self.memory, batch_size)
-
+    
     def __len__(self):
         return len(self.memory)
 
 class DQN(nn.Module):
     def __init__(self, n_observations, n_actions):
         super(DQN, self).__init__()
-        self.layer1= nn.Linear(n_observations, 128)
-        self.layer2= nn.Linear(128, 128)
-        self.layer3= nn.Linear(128, n_actions)
+        self.layer1 = nn.Linear(n_observations, 128)
+        self.layer2 = nn.Linear(128, 128)
+        self.layer3 = nn.Linear(128, n_actions)
 
-       # Called with either one element to determine next action, or a batch
-       #  during optimization. Returns tensor([[left0exp,right0exp]...]).
     def forward(self, x):
         x = F.relu(self.layer1(x))
         x = F.relu(self.layer2(x))
@@ -88,37 +70,29 @@ EPS_DECAY = 2500
 #TAU IS THE UPDATED RATE OF THE TARGET NETWORK 
 TAU = 0.005
 #LR IS THE LEARNING RATE 
-LR = 3e-4
+LR = 3e-4    
 
-#GET NUMBER OF ACTION FROM GYM ACTION SPACE 
 n_actions = env.action_space.n
 
-#get number of state observations 
 state, info = env.reset()
 n_observations = len(state)
 
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
-target_net.load_state_dict(policy_net.state_dict())
 
-optimizer = optim.AdamW(policy_net.parameters(), lr= LR, amsgrad =TRUE)
-memory = ReplayMemory(10000)
+optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
+memory = ReplayMemory(10,000)
 
-steps_done =0
+steps_done = 0
 
 def select_action(state):
     global steps_done
     sample = random.random()
-    eps_threshold = EPS_END + (EPS_START - EPS_END) * \
-        math.exp(-1 * steps_done / EPS_DECAY)
-    steps_done += 1
+    eps_threshold = EPS_END + (EPS_START-EPS_END) * math.exp(-1*steps_done/EPS_DECAY)
+    steps_done +=1
     if sample > eps_threshold:
         with torch.no_grad():
-            # t.max(1) will return the largest column value of each row.
-            # second column on max result is index of where max element was
-            # found, so we pick action with the larger expected reward.
             return policy_net(state).max(1).indices.view(1, 1)
-
     else:
         return torch.tensor([[env.action_space.sample()]], device = device, dtype =torch.long)
 
@@ -128,20 +102,18 @@ def plot_durations(show_result=False):
     plt.figure(1)
     durations_t = torch.tensor(episode_durations, dtype=torch.float)
     if show_result:
-        plt.title('Result')
+        plt.title("Result")
     else:
         plt.clf()
-        plt.title('Training...')
-    plt.xlabel('Episode')
-    plt.ylabel('Duration')
+        plt.title("Training...")
+    plt.xlabel("Episode")
+    plt.ylabel("Duration")
     plt.plot(durations_t.numpy())
-    # Take 100 episode averages and plot them too
     if len(durations_t) >= 100:
         means = durations_t.unfold(0, 100, 1).mean(1).view(-1)
         means = torch.cat((torch.zeros(99), means))
         plt.plot(means.numpy())
-
-    plt.pause(0.001)  # pause a bit so that plots are updated
+    plt.pause(0.001)
     if is_ipython:
         if not show_result:
             display.display(plt.gcf())
@@ -149,8 +121,6 @@ def plot_durations(show_result=False):
         else:
             display.display(plt.gcf())
 
-
-#training loop
 def optimize_model():
     if len(memory)<BATCH_SIZE:
         return
@@ -192,19 +162,21 @@ def optimize_model():
 
 
 if torch.cuda.is_available():
-    num_episodes = 600
+    num_episodes = 800
 else:
-    num_episodes = 50
+    num_episodes= 100
 
 for i_episode in range(num_episodes):
     state, info = env.reset()
     state = torch.tensor(state, dtype = torch.float32, device=device).unsqueeze(0)
+    episode_reward=0
     for t in count():
         action = select_action(state)
-        observation, reward, terminated, truncated, _ = env.step(action.item())
-        reward = torch.tensor([reward], device= device)
+        observation, reward, terminated, truncated, _  = env.step(action.item())
+        episode_reward += reward
+        reward = torch.tensor([reward], device = device)
         done = terminated or truncated
-
+        
         if terminated:
             next_state = None
         else:
@@ -228,31 +200,10 @@ for i_episode in range(num_episodes):
         target_net.load_state_dict(target_net_state_dict)
 
         if done:
-            episode_durations.append(t + 1)
+            episode_durations.appened(episode_reward)
             plot_durations()
             break
-
-print('Complete')
+print("training complete")
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
-
-# --- Play an episode with rendering to show gameplay ---
-print('Showing actual gameplay...')
-test_env = gym.make("CartPole-v1", render_mode="human")
-state, info = test_env.reset()
-state = torch.tensor(state, dtype=torch.float32, device=device).unsqueeze(0)
-done = False
-
-while not done:
-    # Use the trained policy network to pick the best action (exploitation only)
-    with torch.no_grad():
-        action = policy_net(state).max(1).indices.view(1, 1)
-    
-    observation, reward, terminated, truncated, _ = test_env.step(action.item())
-    done = terminated or truncated
-    
-    if not done:
-        state = torch.tensor(observation, dtype=torch.float32, device=device).unsqueeze(0)
-
-test_env.close()
