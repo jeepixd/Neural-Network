@@ -1,6 +1,3 @@
-from GymnasiumNN import truncated
-from GymnasiumNN import terminated
-from GymnasiumNN import num_episodes
 import gymnasium as gym
 import math
 import random
@@ -66,7 +63,7 @@ EPS_START = 0.9
 #EPS_END is the final value of epsilon
 EPS_END = 0.01
 #EPS_DECAY is the rate at which epsilon decays, HIGER MEANS SLOWER DECAY
-EPS_DECAY = 2500
+EPS_DECAY = 50000
 #TAU IS THE UPDATED RATE OF THE TARGET NETWORK 
 TAU = 0.005
 #LR IS THE LEARNING RATE 
@@ -79,9 +76,10 @@ n_observations = len(state)
 
 policy_net = DQN(n_observations, n_actions).to(device)
 target_net = DQN(n_observations, n_actions).to(device)
+target_net.load_state_dict(policy_net.state_dict())
 
 optimizer = optim.AdamW(policy_net.parameters(), lr=LR, amsgrad=True)
-memory = ReplayMemory(10,000)
+memory = ReplayMemory(10000)
 
 steps_done = 0
 
@@ -164,7 +162,7 @@ def optimize_model():
 if torch.cuda.is_available():
     num_episodes = 800
 else:
-    num_episodes= 100
+    num_episodes= 500
 
 for i_episode in range(num_episodes):
     state, info = env.reset()
@@ -185,7 +183,7 @@ for i_episode in range(num_episodes):
         #store the transition in memory
         memory.push(state, action, next_state, reward)
 
-        #move to next state\
+        #move to next state
         state = next_state
 
         #perform one step of the optimization (on the policy network)
@@ -200,9 +198,30 @@ for i_episode in range(num_episodes):
         target_net.load_state_dict(target_net_state_dict)
 
         if done:
-            episode_durations.appened(episode_reward)
+            episode_durations.append(episode_reward)
             plot_durations()
             break
+        # ---- ADD THIS INSIDE THE i_episode LOOP ----
+    if i_episode % 50 == 0 and i_episode > 0:
+        print(f"--- Visual Check at Episode {i_episode} ---")
+        # Temporarily open a human window
+        check_env = gym.make("LunarLander-v3", render_mode="human")
+        check_state, _ = check_env.reset()
+        check_state = torch.tensor(check_state, dtype=torch.float32, device=device).unsqueeze(0)
+        check_done = False
+        
+        while not check_done:
+            # Use the brain as it currently is (no random exploring)
+            with torch.no_grad():
+                check_action = policy_net(check_state).max(1).indices.view(1, 1)
+            
+            obs, _, term, trunc, _ = check_env.step(check_action.item())
+            check_done = term or trunc
+            check_state = torch.tensor(obs, dtype=torch.float32, device=device).unsqueeze(0)
+            
+        # Cleanly close the window so it doesn't crash!
+        check_env.close() 
+    # --------------------------------------------
 print("training complete")
 plot_durations(show_result=True)
 plt.ioff()
