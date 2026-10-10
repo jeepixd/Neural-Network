@@ -162,7 +162,8 @@ def optimize_model():
 if torch.cuda.is_available():
     num_episodes = 800
 else:
-    num_episodes= 500
+    num_episodes= 800
+
 
 for i_episode in range(num_episodes):
     state, info = env.reset()
@@ -222,7 +223,24 @@ for i_episode in range(num_episodes):
         # Cleanly close the window so it doesn't crash!
         check_env.close() 
     # --------------------------------------------
+
+
+
+
 print("training complete")
 plot_durations(show_result=True)
 plt.ioff()
 plt.show()
+
+# Export brain
+policy_net.eval()
+dummy_input = torch.rand( 1, 8, device=device)
+torch.onnx.export(
+    policy_net,
+    dummy_input,
+    "lunar_lander_dqn.onnx",
+    input_names = ['state'],
+    output_names = ['action']
+
+)
+print("brain exported successfully")
